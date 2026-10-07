@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ADV — Shop Advertising Display</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#000;color:#fff}
+#display{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center}
+#display img,#display video{width:100%;height:100%;object-fit:contain;display:none}
+#loading,#empty{position:absolute;text-align:center;color:#fff}
+#empty{display:none}.adminBtn{position:fixed;z-index:20;bottom:12px;left:12px;background:#111b;color:#fff;border:1px solid #555;border-radius:20px;padding:8px 14px;cursor:pointer;font-size:12px}
+#admin,#login{display:none;position:fixed;inset:0;z-index:100;overflow:auto;background:linear-gradient(135deg,#07111f,#111936 55%,#20103c);padding:24px}
+.wrap{max-width:1100px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.top h1{margin:0}.top p{color:#9da9c5}.card{background:#121a2cdd;border:1px solid #ffffff16;border-radius:16px;padding:20px;margin-bottom:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}label{display:block;margin:10px 0 6px;color:#aeb9d3}input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #3a4662;background:#09101e;color:#fff}button{border:0;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer;margin-top:10px}.primary{background:#5b6cff;color:#fff}.green{background:#12b981;color:#fff}.red{background:#ef4444;color:#fff}.gray{background:#303a52;color:#fff}.file{border:2px dashed #475574;padding:24px;text-align:center;border-radius:12px;cursor:pointer;margin-top:10px}.list{display:flex;flex-direction:column;gap:10px}.item{display:grid;grid-template-columns:100px 1fr auto;gap:14px;align-items:center;background:#09101e;border:1px solid #29344d;border-radius:12px;padding:9px}.thumb{width:100px;height:65px;background:#000;border-radius:7px;overflow:hidden}.thumb img,.thumb video{width:100%;height:100%;object-fit:cover}.muted{color:#8995b1;font-size:13px}.loginBox{max-width:420px;margin:10vh auto;background:#121a2c;padding:28px;border-radius:18px;border:1px solid #ffffff18}.msg{margin-top:10px;color:#ff9090}.ok{color:#63e6bb}@media(max-width:700px){.grid{grid-template-columns:1fr}.item{grid-template-columns:70px 1fr}.thumb{width:70px;height:55px}.actions{grid-column:1/-1}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="display"><div id="loading">Loading advertisements...</div><img id="img"><video id="vid" muted playsinline autoplay></video><div id="empty"><h1>Advertisement Display</h1><p>No advertisements available.</p></div></div>
+<button class="adminBtn" onclick="openLogin()">Admin</button>
+
+<div id="login"><div class="loginBox"><h1>Admin Login</h1><p class="muted">Manage shop advertisements from any device.</p><label>Email</label><input id="email" type="email"><label>Password</label><input id="password" type="password"><button class="primary" style="width:100%" onclick="login()">LOGIN</button><div id="loginMsg" class="msg"></div><button class="gray" style="width:100%" onclick="back()">BACK TO DISPLAY</button></div></div>
+
+<div id="admin"><div class="wrap">
+<div class="top"><div><h1>📺 ADV Advertising Manager</h1><p>Cloud shop digital-signage control panel</p></div><div><button class="green" onclick="showDisplay()">DISPLAY</button><button class="gray" onclick="logout()">LOGOUT</button></div></div>
+
+<div class="card"><h2>➕ Add Advertisement</h2><label>Title</label><input id="title" placeholder="Weekend Special Offer"><label>Image duration</label><select id="duration"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>30</option><option>60</option></select><label>Image / Video</label><div class="file" onclick="document.getElementById('file').click()">📁 Click to choose advertisement file<br><span class="muted">JPG, PNG, WEBP, MP4, WEBM</span></div><input id="file" type="file" accept="image/*,video/*" style="display:none" onchange="selected()"><p id="selected" class="muted"></p><button class="primary" onclick="upload()">UPLOAD ADVERTISEMENT</button><p id="uploadMsg" class="msg"></p></div>
+
+<div class="grid"><div class="card"><h2>📊 Status</h2><p class="muted">Advertisements</p><h1 id="count">0</h1><p class="muted">Cloud</p><b id="status">Connecting...</b></div><div class="card"><h2>🔄 Display</h2><p class="muted">The TV automatically reads the cloud playlist. Changes are synchronized using Supabase Realtime.</p><button class="gray" onclick="load()">REFRESH</button></div></div>
+
+<div class="card"><h2>📋 Playlist</h2><div id="list" class="list"></div></div>
+</div></div>
+
+<script>
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_KEY="YOUR_SUPABASE_PUBLISHABLE_KEY";
+const BUCKET="advertisements";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let ads=[],index=0,timer;
+
+document.addEventListener("DOMContentLoaded",()=>{if(SUPABASE_URL.startsWith("YOUR_")){document.getElementById("loading").innerHTML="Configure Supabase URL and publishable key in index.html";return}load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"advertisements"},()=>load()).subscribe();setInterval(load,15000)});
+
+async function load(){
+ const r=await sb.from("advertisements").select("*").eq("is_active",true).order("sort_order",{ascending:true}).order("created_at",{ascending:true});
+ if(r.error){document.getElementById("status").textContent="Cloud error";return}
+ ads=r.data||[];document.getElementById("count").textContent=ads.length;document.getElementById("status").textContent="Connected";render();
+ if(!ads.length){stop();document.getElementById("loading").style.display="none";document.getElementById("empty").style.display="block";return}
+ document.getElementById("empty").style.display="none";document.getElementById("loading").style.display="none";if(!timer)play();
+}
+function stop(){clearTimeout(timer);timer=null;let v=document.getElementById("vid");v.pause();v.removeAttribute("src");v.load();document.getElementById("img").style.display="none";v.style.display="none"}
+function play(){clearTimeout(timer);if(!ads.length)return;if(index>=ads.length)index=0;let a=ads[index],img=document.getElementById("img"),v=document.getElementById("vid");if(a.media_type==="video"){img.style.display="none";v.style.display="block";v.src=a.file_url;v.currentTime=0;v.play().catch(()=>{});v.onended=next}else{v.pause();v.style.display="none";img.src=a.file_url;img.style.display="block";timer=setTimeout(next,Number(a.duration_seconds||10)*1000)}}
+function next(){timer=null;index=(index+1)%ads.length;play()}
+function openLogin(){document.getElementById("login").style.display="block";document.getElementById("admin").style.display="none"}
+function back(){document.getElementById("login").style.display="none";showDisplay()}
+function showDisplay(){document.getElementById("admin").style.display="none";document.getElementById("login").style.display="none";document.getElementById("display").style.display="flex"}
+async function login(){let email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;let r=await sb.auth.signInWithPassword({email,password});if(r.error){document.getElementById("loginMsg").textContent=r.error.message;return}document.getElementById("login").style.display="none";document.getElementById("admin").style.display="block";load()}
+async function logout(){await sb.auth.signOut();showDisplay()}
+function selected(){let f=document.getElementById("file").files[0];document.getElementById("selected").textContent=f?f.name+" — "+(f.size/1024/1024).toFixed(2)+" MB":""}
+async function upload(){
+ let f=document.getElementById("file").files[0],title=document.getElementById("title").value.trim(),duration=Number(document.getElementById("duration").value);
+ if(!f){document.getElementById("uploadMsg").textContent="Select a file first.";return}
+ let s=await sb.auth.getSession();if(!s.data.session){document.getElementById("uploadMsg").textContent="Login first.";return}
+ let ext=f.name.split(".").pop().toLowerCase(),type=f.type.startsWith("video/")?"video":"image",path="ads/"+crypto.randomUUID()+"."+ext;
+ let up=await sb.storage.from(BUCKET).upload(path,f,{contentType:f.type,upsert:false});
+ if(up.error){document.getElementById("uploadMsg").textContent=up.error.message;return}
+ let url=sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+ let last=await sb.from("advertisements").select("sort_order").order("sort_order",{ascending:false}).limit(1).maybeSingle();
+ let order=last.data?Number(last.data.sort_order||0)+1:1;
+ let ins=await sb.from("advertisements").insert({title:title||f.name,file_url:url,storage_path:path,media_type:type,duration_seconds:type==="image"?duration:0,sort_order:order,is_active:true});
+ if(ins.error){await sb.storage.from(BUCKET).remove([path]);document.getElementById("uploadMsg").textContent=ins.error.message;return}
+ document.getElementById("uploadMsg").textContent="Uploaded successfully.";document.getElementById("uploadMsg").className="msg ok";document.getElementById("file").value="";document.getElementById("title").value="";selected();load()
+}
+function esc(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function render(){let el=document.getElementById("list");if(!ads.length){el.innerHTML='<p class="muted">No advertisements yet.</p>';return}el.innerHTML=ads.map((a,i)=>'<div class="item"><div class="thumb">'+(a.media_type==="video"?'<video src="'+esc(a.file_url)+'" muted preload="metadata"></video>':'<img src="'+esc(a.file_url)+'">')+'</div><div><b>'+((i+1)+". "+esc(a.title))+'</b><div class="muted">'+a.media_type.toUpperCase()+(a.media_type==="image"?" • "+a.duration_seconds+" sec":"")+'</div></div><div class="actions">'+(i?'<button class="gray" onclick="move(\''+a.id+'\',\'up\')">↑</button>':"")+(i<ads.length-1?'<button class="gray" onclick="move(\''+a.id+'\',\'down\')">↓</button>':"")+'<button class="red" onclick="del(\''+a.id+'\')">DELETE</button></div></div>').join("")}
+async function del(id){let a=ads.find(x=>x.id===id);if(!a||!confirm("Delete "+a.title+"?"))return;let r=await sb.from("advertisements").delete().eq("id",id);if(r.error){alert(r.error.message);return}if(a.storage_path)await sb.storage.from(BUCKET).remove([a.storage_path]);load()}
+async function move(id,dir){let i=ads.findIndex(x=>x.id===id),j=dir==="up"?i-1:i+1;if(j<0||j>=ads.length)return;let a=ads[i],b=ads[j];await sb.from("advertisements").update({sort_order:b.sort_order}).eq("id",a.id);await sb.from("advertisements").update({sort_order:a.sort_order}).eq("id",b.id);load()}
+</script>
+</body>
+</html>
