@@ -40,6 +40,7 @@ const BUCKET="advertisements";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let ads=[],index=0,timer;
 let tickerText="Welcome to our shop • Special Offer Today!";
+let tickerSpeed=25;
 
 document.addEventListener("DOMContentLoaded",()=>{loadSettings();load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_advertisements"},()=>load()).subscribe();sb.channel("adv-settings-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_settings"},()=>loadSettings()).subscribe();setInterval(load,30000)});
 
@@ -47,13 +48,27 @@ async function loadSettings(){
  const r=await sb.from("adv_settings").select("ticker_text,ticker_speed").eq("id",1).maybeSingle();
  if(!r.error&&r.data){
    tickerText=r.data.ticker_text||"Advertisement";
+   tickerSpeed=Math.max(8,Math.min(60,Number(r.data.ticker_speed||25)));
    document.getElementById("globalTicker").value=tickerText;
+   document.getElementById("tickerSpeed").value=tickerSpeed;
+   document.getElementById("tickerSpeedValue").textContent=tickerSpeed+" sec";
+   applyTickerSpeed();
  }
 }
-function speedPreview(){\n const s=Number(document.getElementById("tickerSpeed").value);\n document.getElementById("tickerSpeedValue").textContent=s+" sec";\n tickerSpeed=s;\n applyTickerSpeed();\n}\nfunction applyTickerSpeed(){\n const txt=document.getElementById("adTickerText");\n txt.style.animationDuration=tickerSpeed+"s";\n}\nasync function saveTicker(){
+function speedPreview(){
+ const s=Number(document.getElementById("tickerSpeed").value);
+ document.getElementById("tickerSpeedValue").textContent=s+" sec";
+ tickerSpeed=s;
+ applyTickerSpeed();
+}
+function applyTickerSpeed(){
+ const txt=document.getElementById("adTickerText");
+ txt.style.animationDuration=tickerSpeed+"s";
+}\nasync function saveTicker(){
  const input=document.getElementById("globalTicker");
  const msg=document.getElementById("tickerMsg");
- const value=input.value.trim();\n const speed=Math.max(8,Math.min(60,Number(document.getElementById("tickerSpeed").value)||25));
+ const value=input.value.trim();
+ const speed=Math.max(8,Math.min(60,Number(document.getElementById("tickerSpeed").value)||25));
  if(!value){msg.textContent="Enter scrolling text.";msg.className="msg";return}
  const s=await sb.auth.getSession();
  if(!s.data.session){msg.textContent="Login first.";msg.className="msg";return}
