@@ -12,7 +12,7 @@
 #loading,#empty{position:absolute;text-align:center;color:#fff}
 #empty{display:none}
 #adTicker{position:fixed;z-index:10;left:50%;bottom:24px;transform:translateX(-50%);width:min(90%,1100px);height:46px;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.35);border-radius:10px;overflow:hidden;display:none;box-shadow:0 5px 25px rgba(0,0,0,.5)}
-#adTickerText{display:inline-block;white-space:nowrap;min-width:100%;padding:10px 30px;font-size:22px;font-weight:700;line-height:26px;animation:ticker 12s linear infinite}
+#adTickerText{display:inline-block;white-space:nowrap;min-width:100%;padding:10px 30px;font-size:22px;font-weight:700;line-height:26px;animation:ticker 25s linear infinite}
 @keyframes ticker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
 .adminBtn{position:fixed;z-index:20;bottom:12px;left:12px;background:#111b;color:#fff;border:1px solid #555;border-radius:20px;padding:8px 14px;cursor:pointer;font-size:12px}
 #admin,#login{display:none;position:fixed;inset:0;z-index:100;overflow:auto;background:linear-gradient(135deg,#07111f,#111936 55%,#20103c);padding:24px}
@@ -41,7 +41,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let ads=[],index=0,timer;
 let tickerText="Welcome to our shop • Special Offer Today!";
 
-document.addEventListener("DOMContentLoaded",()=>{loadSettings();load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_advertisements"},()=>load()).subscribe();sb.channel("adv-settings-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_settings"},()=>loadSettings()).subscribe();setInterval(load,15000)});
+document.addEventListener("DOMContentLoaded",()=>{loadSettings();load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_advertisements"},()=>load()).subscribe();sb.channel("adv-settings-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_settings"},()=>loadSettings()).subscribe();setInterval(load,30000)});
 
 async function loadSettings(){
  const r=await sb.from("adv_settings").select("ticker_text").eq("id",1).maybeSingle();
@@ -64,13 +64,46 @@ async function saveTicker(){
 async function load(){
  const r=await sb.from("adv_advertisements").select("*").eq("is_active",true).order("sort_order",{ascending:true}).order("created_at",{ascending:true});
  if(r.error){document.getElementById("status").textContent="Cloud error";return}
- ads=r.data||[];document.getElementById("count").textContent=ads.length;document.getElementById("status").textContent="Connected";render();
+ ads=r.data||[];
+ document.getElementById("count").textContent=ads.length;
+ document.getElementById("status").textContent="Connected";
+ if(index>=ads.length)index=0;
+ render();
  if(!ads.length){stop();document.getElementById("loading").style.display="none";document.getElementById("empty").style.display="block";document.getElementById("adTicker").style.display="none";return}
  document.getElementById("empty").style.display="none";document.getElementById("loading").style.display="none";if(!timer)play();
 }
 function stop(){clearTimeout(timer);timer=null;let v=document.getElementById("vid");v.pause();v.removeAttribute("src");v.load();document.getElementById("img").style.display="none";v.style.display="none";document.getElementById("adTicker").style.display="none"}
-function showTicker(a){let box=document.getElementById("adTicker"),txt=document.getElementById("adTickerText");txt.textContent=tickerText||"Advertisement";txt.style.animation="none";void txt.offsetWidth;txt.style.animation="ticker 12s linear infinite";box.style.display="block"}
-function play(){clearTimeout(timer);if(!ads.length)return;if(index>=ads.length)index=0;let a=ads[index],img=document.getElementById("img"),v=document.getElementById("vid");showTicker(a);if(a.media_type==="video"){img.style.display="none";v.style.display="block";v.src=a.file_url;v.currentTime=0;v.play().catch(()=>{});v.onended=next}else{v.pause();v.style.display="none";img.src=a.file_url;img.style.display="block";timer=setTimeout(next,Number(a.duration_seconds||10)*1000)}}
+function showTicker(a){let box=document.getElementById("adTicker"),txt=document.getElementById("adTickerText");txt.textContent=tickerText||"Advertisement";txt.style.animation="none";void txt.offsetWidth;txt.style.animation="ticker 25s linear infinite";box.style.display="block"}
+function play(){
+ clearTimeout(timer);
+ if(!ads.length)return;
+ if(index>=ads.length)index=0;
+ let a=ads[index],img=document.getElementById("img"),v=document.getElementById("vid");
+ showTicker(a);
+ if(a.media_type==="video"){
+   img.style.display="none";
+   v.style.display="block";
+   v.onended=next;
+   v.onerror=()=>{timer=setTimeout(next,5000)};
+   v.onloadedmetadata=()=>{
+     clearTimeout(timer);
+     let seconds=Number(v.duration);
+     if(Number.isFinite(seconds)&&seconds>0) timer=setTimeout(next,seconds*1000+300);
+   };
+   v.src=a.file_url;
+   v.currentTime=0;
+   v.play().catch(()=>{timer=setTimeout(next,10000)});
+ }else{
+   v.pause();
+   v.removeAttribute("src");
+   v.load();
+   v.style.display="none";
+   img.onload=()=>{};
+   img.src=a.file_url;
+   img.style.display="block";
+   timer=setTimeout(next,Number(a.duration_seconds||10)*1000);
+ }
+}
 function next(){timer=null;index=(index+1)%ads.length;play()}
 function openLogin(){document.getElementById("login").style.display="block";document.getElementById("admin").style.display="none"}
 function back(){document.getElementById("login").style.display="none";showDisplay()}
