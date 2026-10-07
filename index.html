@@ -27,7 +27,7 @@
 
 <div id="admin"><div class="wrap">
 <div class="top"><div><h1>📺 ADV Advertising Manager</h1><p>Cloud shop digital-signage control panel</p></div><div><button class="green" onclick="showDisplay()">DISPLAY</button><button class="gray" onclick="logout()">LOGOUT</button></div></div>
-<div class="card"><h2>✏️ Common Scrolling Text</h2><p class="muted">One text will scroll below EVERY photo and video.</p><label>Scrolling text for all advertisements</label><input id="globalTicker" placeholder="Welcome to our shop • Special Offer Today!"><button class="green" onclick="saveTicker()">SAVE / EDIT TEXT</button><p id="tickerMsg" class="msg"></p></div>
+<div class="card"><h2>✏️ Common Scrolling Text</h2><p class="muted">One text will scroll below EVERY photo and video.</p><label>Scrolling text for all advertisements</label><input id="globalTicker" placeholder="Welcome to our shop • Special Offer Today!"><label>Letter speed</label><input id="tickerSpeed" type="range" min="8" max="60" value="25" step="1" oninput="speedPreview()"><div class="muted">Slow ← <b id="tickerSpeedValue">25 sec</b> → Fast</div><button class="green" onclick="saveTicker()">SAVE / EDIT TEXT + SPEED</button><p id="tickerMsg" class="msg"></p></div>
 <div class="card"><h2>➕ Add Advertisement</h2><label>Image duration</label><select id="duration"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>30</option><option>60</option></select><label>Image / Video</label><div class="file" onclick="document.getElementById('file').click()">📁 Click to choose advertisement file<br><span class="muted">JPG, PNG, WEBP, MP4, WEBM</span></div><input id="file" type="file" accept="image/*,video/*" style="display:none" onchange="selected()"><p id="selected" class="muted"></p><button class="primary" onclick="upload()">UPLOAD ADVERTISEMENT</button><p id="uploadMsg" class="msg"></p></div>
 <div class="grid"><div class="card"><h2>📊 Status</h2><p class="muted">Advertisements</p><h1 id="count">0</h1><p class="muted">Cloud</p><b id="status">Connecting...</b></div><div class="card"><h2>🔄 Display</h2><p class="muted">The TV automatically reads the cloud playlist. Changes are synchronized using Supabase Realtime.</p><button class="gray" onclick="load()">REFRESH</button></div></div>
 <div class="card"><h2>📋 Playlist</h2><div id="list" class="list"></div></div>
@@ -44,22 +44,22 @@ let tickerText="Welcome to our shop • Special Offer Today!";
 document.addEventListener("DOMContentLoaded",()=>{loadSettings();load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_advertisements"},()=>load()).subscribe();sb.channel("adv-settings-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_settings"},()=>loadSettings()).subscribe();setInterval(load,30000)});
 
 async function loadSettings(){
- const r=await sb.from("adv_settings").select("ticker_text").eq("id",1).maybeSingle();
+ const r=await sb.from("adv_settings").select("ticker_text,ticker_speed").eq("id",1).maybeSingle();
  if(!r.error&&r.data){
    tickerText=r.data.ticker_text||"Advertisement";
    document.getElementById("globalTicker").value=tickerText;
  }
 }
-async function saveTicker(){
+function speedPreview(){\n const s=Number(document.getElementById("tickerSpeed").value);\n document.getElementById("tickerSpeedValue").textContent=s+" sec";\n tickerSpeed=s;\n applyTickerSpeed();\n}\nfunction applyTickerSpeed(){\n const txt=document.getElementById("adTickerText");\n txt.style.animationDuration=tickerSpeed+"s";\n}\nasync function saveTicker(){
  const input=document.getElementById("globalTicker");
  const msg=document.getElementById("tickerMsg");
- const value=input.value.trim();
+ const value=input.value.trim();\n const speed=Math.max(8,Math.min(60,Number(document.getElementById("tickerSpeed").value)||25));
  if(!value){msg.textContent="Enter scrolling text.";msg.className="msg";return}
  const s=await sb.auth.getSession();
  if(!s.data.session){msg.textContent="Login first.";msg.className="msg";return}
- const r=await sb.from("adv_settings").upsert({id:1,ticker_text:value,updated_at:new Date().toISOString()});
+ const r=await sb.from("adv_settings").upsert({id:1,ticker_text:value,ticker_speed:speed,updated_at:new Date().toISOString()});
  if(r.error){msg.textContent=r.error.message;msg.className="msg";return}
- tickerText=value;msg.textContent="Scrolling text updated for ALL photos & videos.";msg.className="msg ok";showTicker(ads[index]||{});
+ tickerText=value;tickerSpeed=speed;applyTickerSpeed();msg.textContent="Scrolling text and speed updated for ALL photos & videos.";msg.className="msg ok";showTicker(ads[index]||{});
 }
 async function load(){
  const r=await sb.from("adv_advertisements").select("*").eq("is_active",true).order("sort_order",{ascending:true}).order("created_at",{ascending:true});
@@ -79,7 +79,7 @@ function showTicker(a){
    txt.textContent=nextText;
    txt.style.animation="none";
    void txt.offsetWidth;
-   txt.style.animation="ticker 25s linear infinite";
+   txt.style.animation="ticker "+tickerSpeed+"s linear infinite";
  }
  box.style.display="block";
 }
