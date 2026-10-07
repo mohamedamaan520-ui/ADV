@@ -32,16 +32,16 @@
 </div></div>
 
 <script>
-const SUPABASE_URL="YOUR_SUPABASE_URL";
-const SUPABASE_KEY="YOUR_SUPABASE_PUBLISHABLE_KEY";
+const SUPABASE_URL="https://btcgmhjujcfhoafabteh.supabase.co";
+const SUPABASE_KEY="sb_publishable_JtQN8btEI6-t-rHHe8pKmQ_B47yAjsU";
 const BUCKET="advertisements";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let ads=[],index=0,timer;
 
-document.addEventListener("DOMContentLoaded",()=>{if(SUPABASE_URL.startsWith("YOUR_")){document.getElementById("loading").innerHTML="Configure Supabase URL and publishable key in index.html";return}load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"advertisements"},()=>load()).subscribe();setInterval(load,15000)});
+document.addEventListener("DOMContentLoaded",()=>{if(SUPABASE_URL.startsWith("YOUR_")){document.getElementById("loading").innerHTML="Configure Supabase URL and publishable key in index.html";return}load();sb.channel("adv-sync").on("postgres_changes",{event:"*",schema:"public",table:"adv_advertisements"},()=>load()).subscribe();setInterval(load,15000)});
 
 async function load(){
- const r=await sb.from("advertisements").select("*").eq("is_active",true).order("sort_order",{ascending:true}).order("created_at",{ascending:true});
+ const r=await sb.from("adv_advertisements").select("*").eq("is_active",true).order("sort_order",{ascending:true}).order("created_at",{ascending:true});
  if(r.error){document.getElementById("status").textContent="Cloud error";return}
  ads=r.data||[];document.getElementById("count").textContent=ads.length;document.getElementById("status").textContent="Connected";render();
  if(!ads.length){stop();document.getElementById("loading").style.display="none";document.getElementById("empty").style.display="block";return}
@@ -64,16 +64,16 @@ async function upload(){
  let up=await sb.storage.from(BUCKET).upload(path,f,{contentType:f.type,upsert:false});
  if(up.error){document.getElementById("uploadMsg").textContent=up.error.message;return}
  let url=sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
- let last=await sb.from("advertisements").select("sort_order").order("sort_order",{ascending:false}).limit(1).maybeSingle();
+ let last=await sb.from("adv_advertisements").select("sort_order").order("sort_order",{ascending:false}).limit(1).maybeSingle();
  let order=last.data?Number(last.data.sort_order||0)+1:1;
- let ins=await sb.from("advertisements").insert({title:title||f.name,file_url:url,storage_path:path,media_type:type,duration_seconds:type==="image"?duration:0,sort_order:order,is_active:true});
+ let ins=await sb.from("adv_advertisements").insert({title:title||f.name,file_url:url,storage_path:path,media_type:type,duration_seconds:type==="image"?duration:0,sort_order:order,is_active:true});
  if(ins.error){await sb.storage.from(BUCKET).remove([path]);document.getElementById("uploadMsg").textContent=ins.error.message;return}
  document.getElementById("uploadMsg").textContent="Uploaded successfully.";document.getElementById("uploadMsg").className="msg ok";document.getElementById("file").value="";document.getElementById("title").value="";selected();load()
 }
 function esc(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
 function render(){let el=document.getElementById("list");if(!ads.length){el.innerHTML='<p class="muted">No advertisements yet.</p>';return}el.innerHTML=ads.map((a,i)=>'<div class="item"><div class="thumb">'+(a.media_type==="video"?'<video src="'+esc(a.file_url)+'" muted preload="metadata"></video>':'<img src="'+esc(a.file_url)+'">')+'</div><div><b>'+((i+1)+". "+esc(a.title))+'</b><div class="muted">'+a.media_type.toUpperCase()+(a.media_type==="image"?" • "+a.duration_seconds+" sec":"")+'</div></div><div class="actions">'+(i?'<button class="gray" onclick="move(\''+a.id+'\',\'up\')">↑</button>':"")+(i<ads.length-1?'<button class="gray" onclick="move(\''+a.id+'\',\'down\')">↓</button>':"")+'<button class="red" onclick="del(\''+a.id+'\')">DELETE</button></div></div>').join("")}
-async function del(id){let a=ads.find(x=>x.id===id);if(!a||!confirm("Delete "+a.title+"?"))return;let r=await sb.from("advertisements").delete().eq("id",id);if(r.error){alert(r.error.message);return}if(a.storage_path)await sb.storage.from(BUCKET).remove([a.storage_path]);load()}
-async function move(id,dir){let i=ads.findIndex(x=>x.id===id),j=dir==="up"?i-1:i+1;if(j<0||j>=ads.length)return;let a=ads[i],b=ads[j];await sb.from("advertisements").update({sort_order:b.sort_order}).eq("id",a.id);await sb.from("advertisements").update({sort_order:a.sort_order}).eq("id",b.id);load()}
+async function del(id){let a=ads.find(x=>x.id===id);if(!a||!confirm("Delete "+a.title+"?"))return;let r=await sb.from("adv_advertisements").delete().eq("id",id);if(r.error){alert(r.error.message);return}if(a.storage_path)await sb.storage.from(BUCKET).remove([a.storage_path]);load()}
+async function move(id,dir){let i=ads.findIndex(x=>x.id===id),j=dir==="up"?i-1:i+1;if(j<0||j>=ads.length)return;let a=ads[i],b=ads[j];await sb.from("adv_advertisements").update({sort_order:b.sort_order}).eq("id",a.id);await sb.from("adv_advertisements").update({sort_order:a.sort_order}).eq("id",b.id);load()}
 </script>
 </body>
 </html>
