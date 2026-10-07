@@ -8,6 +8,48 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#000;color:#fff}
 #display{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center}
+/* Auto-fit advertisement media + animated background */
+#display{
+  background-size:cover;
+  background-position:center;
+  overflow:hidden;
+}
+#display::before{
+  content:"";
+  position:absolute;
+  inset:-12%;
+  z-index:0;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(0,180,255,.22),transparent 35%),
+    radial-gradient(circle at 80% 70%,rgba(255,0,170,.20),transparent 35%),
+    linear-gradient(120deg,#050816,#111936,#050816);
+  background-size:160% 160%;
+  animation:advBgMove 14s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+#img,#vid{
+  position:relative;
+  z-index:1;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  display:none;
+  background:transparent;
+}
+#img{
+  animation:advMediaIn .7s ease-out;
+}
+@keyframes advBgMove{
+  0%{transform:scale(1) translate3d(-2%,-1%,0);background-position:0% 50%}
+  50%{transform:scale(1.08) translate3d(2%,1%,0);background-position:100% 50%}
+  100%{transform:scale(1.02) translate3d(-1%,2%,0);background-position:50% 100%}
+}
+@keyframes advMediaIn{
+  from{opacity:0;transform:scale(.985)}
+  to{opacity:1;transform:scale(1)}
+}
+
 #display img,#display video{width:100%;height:100%;object-fit:contain;display:none}
 #loading,#empty{position:absolute;text-align:center;color:#fff}
 #empty{display:none}
