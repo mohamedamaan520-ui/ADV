@@ -64,7 +64,8 @@ function speedPreview(){
 function applyTickerSpeed(){
   const txt=document.getElementById("adTickerText");
   txt.style.animationDuration=tickerSpeed+"s";
-}\nasync function saveTicker(){
+}
+async function saveTicker(){
  const input=document.getElementById("globalTicker");
  const msg=document.getElementById("tickerMsg");
  const value=input.value.trim();
