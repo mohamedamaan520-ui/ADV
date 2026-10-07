@@ -56,14 +56,14 @@ async function loadSettings(){
  }
 }
 function speedPreview(){
- const s=Number(document.getElementById("tickerSpeed").value);
- document.getElementById("tickerSpeedValue").textContent=s+" sec";
- tickerSpeed=s;
- applyTickerSpeed();
+  const s=Number(document.getElementById("tickerSpeed").value);
+  document.getElementById("tickerSpeedValue").textContent=s+" sec";
+  tickerSpeed=s;
+  applyTickerSpeed();
 }
 function applyTickerSpeed(){
- const txt=document.getElementById("adTickerText");
- txt.style.animationDuration=tickerSpeed+"s";
+  const txt=document.getElementById("adTickerText");
+  txt.style.animationDuration=tickerSpeed+"s";
 }\nasync function saveTicker(){
  const input=document.getElementById("globalTicker");
  const msg=document.getElementById("tickerMsg");
@@ -89,13 +89,16 @@ async function load(){
 }
 function stop(){clearTimeout(timer);timer=null;let v=document.getElementById("vid");v.pause();v.removeAttribute("src");v.load();document.getElementById("img").style.display="none";v.style.display="none";document.getElementById("adTicker").style.display="none"}
 function showTicker(a){
- let box=document.getElementById("adTicker"),txt=document.getElementById("adTickerText"),nextText=tickerText||"Advertisement";
+ let box=document.getElementById("adTicker");
+ let txt=document.getElementById("adTickerText");
+ let nextText=tickerText||"Advertisement";
  if(txt.textContent!==nextText){
    txt.textContent=nextText;
    txt.style.animation="none";
    void txt.offsetWidth;
    txt.style.animation="ticker "+tickerSpeed+"s linear infinite";
  }
+ applyTickerSpeed();
  box.style.display="block";
 }
 function play(){
