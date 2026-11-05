@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ammu-whatsapp-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VERIFY_TOKEN
+        sync: false
+      - key: ADMIN_KEY
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: PHONE_NUMBER_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v23.0
