@@ -1,0 +1,15 @@
+name = "ammu-whatsapp-bot"
+main = "worker.js"
+compatibility_date = "2026-11-05"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ammu-whatsapp-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "ammu-whatsapp-media"
+
+[vars]
+WHATSAPP_API_VERSION = "v23.0"
