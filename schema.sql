@@ -22,3 +22,4 @@ CREATE TABLE IF NOT EXISTS saved_media (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_media_created ON saved_media(created_at DESC);
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT NOT NULL);
