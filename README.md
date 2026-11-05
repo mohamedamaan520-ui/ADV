@@ -1,22 +1,20 @@
-# AMMU WhatsApp Bot
+# AMMU WHATSAPP BOT
+GitHub Pages dashboard + Cloudflare Worker. Render and the old Express backend are retired.
 
-GitHub Pages serves the admin dashboard. Render runs the Node.js WhatsApp Cloud API webhook.
+## Four features
+- Song Downloader/Search: returns official listening links and previews; no unauthorized copyrighted full-track downloads.
+- Message Saver: saves text in D1 and image/video files in R2 when delivered to the bot.
+- Image to Sticker: dashboard converts a selected image to WebP in the browser and sends it as a WhatsApp sticker.
+- Auto Reaction: reacts to incoming messages using the selected emoji.
 
-## Deploy
-1. In Render choose **New > Blueprint**, connect this repository and deploy the `render.yaml` blueprint.
-2. Set Render environment variables: `VERIFY_TOKEN`, `ADMIN_KEY`, `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, and recommended `META_APP_SECRET`. Set `WHATSAPP_API_VERSION` to a version supported by your Meta app.
-3. In Meta Developer Dashboard > WhatsApp > Configuration set callback URL to `https://YOUR-RENDER-HOST/webhook`, use the same `VERIFY_TOKEN`, verify and subscribe to `messages`.
-4. Open https://mohamedamaan520-ui.github.io/ADV/ and connect using Render URL and `ADMIN_KEY`.
+## Cloudflare setup
+1. Create D1 database `ammu-whatsapp-db`, then run `schema.sql` in its SQL console.
+2. Create R2 bucket `ammu-whatsapp-media`.
+3. Replace D1 `database_id` in `wrangler.toml`.
+4. Install Wrangler: `npm install -g wrangler`; sign in with `wrangler login`; deploy with `wrangler deploy`.
+5. Add secrets: `wrangler secret put VERIFY_TOKEN`, `ADMIN_KEY`, `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`.
+6. In Meta WhatsApp Configuration, set webhook URL to `https://YOUR-WORKER.workers.dev/webhook`, same verify token, subscribe to `messages`.
+7. Open GitHub Pages and connect using Worker URL and ADMIN_KEY.
 
-## Included features
-- Dashboard, incoming/outgoing message history, contacts, manual text sending and editable auto replies.
-- **Song search:** send `SONG <song name>`; the bot returns official iTunes listening and preview links. It does not fetch unauthorized copyrighted full tracks.
-- **Sticker maker:** send an image with caption `STICKER`; the bot converts it to WebP and sends it back as a WhatsApp sticker.
-- **Media saver:** send an image or video to the business number; the bot saves it and lists it in the dashboard's Saved Media page. Each received media file is limited to 16 MB.
-
-## Important limitations
-- Cloud API cannot recover media deleted from other people's chats or messages the bot never received.
-- Current Render storage and message history are temporary/in-memory. Files/history can be lost on restart or redeploy. Add persistent storage or a database for long-term archives.
-- WhatsApp Cloud API charges may apply depending on message category and destination. Render's free service may sleep.
-- Use only music you own or are licensed to share. Song search provides official links/previews rather than unauthorized copyrighted downloads.
-- Never commit access tokens, admin keys or app secrets. Use opted-in contacts and comply with Meta's WhatsApp policies.
+## Limitations
+The bot can save only messages delivered to it after webhook activation; it cannot recover old/deleted messages it never received. Song search returns official links and previews, not unauthorized MP3 downloads. WhatsApp opt-in rules and Meta fees may apply. Keep secrets out of GitHub.
