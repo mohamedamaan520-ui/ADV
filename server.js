@@ -73,7 +73,7 @@ async function uploadWhatsAppMedia(buffer,mime,filename){
  return d.id;
 }
 async function sendSticker(to,buffer){
- const webp=await sharp(buffer).rotate().resize(512,512,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}}).webp({quality:82}).toBuffer();
+ let quality=78;let webp=await sharp(buffer).rotate().resize(512,512,{fit:"inside",withoutEnlargement:true}).webp({quality,effort:6}).toBuffer();while(webp.length>100*1024&&quality>25){quality-=10;webp=await sharp(buffer).rotate().resize(512,512,{fit:"inside",withoutEnlargement:true}).webp({quality,effort:6}).toBuffer();}if(webp.length>100*1024)throw new Error("Image is too detailed for a WhatsApp sticker. Try a smaller image.");
  const id=await uploadWhatsAppMedia(webp,"image/webp","ammu-sticker.webp");
  await graph(PHONE_ID+"/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messaging_product:"whatsapp",to,type:"sticker",sticker:{id}})});
  sent++;messages.unshift({time:new Date().toISOString(),direction:"OUT",phone:to,text:"[Sticker sent]",status:"accepted"});
